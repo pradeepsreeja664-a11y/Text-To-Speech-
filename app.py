@@ -1,83 +1,55 @@
 import streamlit as st
-from google import genai
-from google.genai import types
-import base64
-import os
+import google.generativeai as genai
+import io
+import time
+from pydub import AudioSegment
 
-st.set_page_config(page_title="മലയാളം Text to Speech", page_icon="🎙️", layout="centered")
+# API Key സെറ്റ് ചെയ്യുക (Streamlit Secrets വഴി നൽകുന്നത് സുരക്ഷിതമാണ്)
+# genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-st.title("🎙️ Gemini മലയാളം Text to Speech")
-st.write("Gemini API ഉപയോഗിച്ച് എത്ര വലിയ മലയാളം ടെക്സ്റ്റും വോയ്സ് ആക്കി മാറ്റാം.")
+st.title("Malayalam Text-to-Speech (Leda Voice)")
+user_text = st.text_area("നിങ്ങളുടെ വലിയ മലയാളം ടെക്സ്റ്റ് ഇവിടെ നൽകുക:", height=300)
 
-# യൂസർക്ക് സ്ക്രീനിൽ കീ എന്റർ ചെയ്യാനുള്ള ബോക്സ്
-api_key_input = st.text_input("നിങ്ങളുടെ Gemini API Key (AQ...) ഇവിടെ നൽകുക:", type="password")
+def chunk_text(text, max_chars=1000):
+    # വലിയ ടെക്സ്റ്റിനെ ചെറിയ ഭാഗങ്ങളാക്കി മാറ്റാനുള്ള ഫംഗ്ഷൻ
+    return [text[i:i+max_chars] for i in range(0, len(text), max_chars)]
 
-# വോയിസ് സെലക്ഷൻ (Leda-യുടെ ഒഫീഷ്യൽ സിസ്റ്റം നെയിം Aoede എന്നാണ്)
-voice_option = st.selectbox(
-    "വോയ്സ് തിരഞ്ഞെടുക്കുക:",
-    ["Aoede (Leda - Free Premium Voice)", "Puck", "Charon", "Zephyr"]
+if st.button("Generate Audio"):
+    if user_text:
+        st.info("ഓഡിയോ തയ്യാറാക്കുന്നു... ദയവായി കാത്തിരിക്കുക.")
+        chunks = chunk_text(user_text)
+        combined_audio = AudioSegment.empty()
+
+        try:
+            for chunk in chunks:
+                # ഇവിടെ നിങ്ങളുടെ Google AI Studio TTS ലോജിക്/API Call വരും.
+                # Leda വോയിസ് പാരാമീറ്റർ ആയി നൽകുക.
+                
+                # API യിൽ നിന്ന് ലഭിക്കുന്ന ഓഡിയോ pydub ഉപയോഗിച്ച് ചേർക്കുന്ന വിധം:
+                # chunk_audio = AudioSegment.from_file(io.BytesIO(api_response_audio), format="mp3")
+                # combined_audio += chunk_audio
+                
+                # API Rate limit ഒഴിവാക്കാൻ ചെറിയ ഇടവേള നൽകാം
+                time.sleep(2) 
+            
+            # ഫൈനൽ ഓഡിയോ പ്ലേ ചെയ്യാൻ
+            # audio_bytes = io.BytesIO()
+            # combined_audio.export(audio_bytes, format="mp3")
+            # st.audio(audio_bytes.getvalue(), format="audio/mp3")
+            st.success("ഓഡിയോ തയ്യാറാണ്!")
+        except Exception as e:
+            st.error(f"എന്തോ കുഴപ്പമുണ്ടായി: {e}")
+            # ഫൈനൽ ഓഡിയോ പ്ലേ ചെയ്യാനുള്ള പഴയ കോഡ്
+audio_bytes = io.BytesIO()
+combined_audio.export(audio_bytes, format="mp3")
+audio_data = audio_bytes.getvalue()
+
+st.audio(audio_data, format="audio/mp3")
+
+# ഇതിന് താഴെയായി ഡൗൺലോഡ് ബട്ടൺ ചേർക്കാൻ താഴെയുള്ള കോഡ് നൽകുക:
+st.download_button(
+    label="ഓഡിയോ ഡൗൺലോഡ് ചെയ്യുക 📥",
+    data=audio_data,
+    file_name="malayalam_speech.mp3",
+    mime="audio/mp3"
 )
-
-text_input = st.text_area("മലയാളം ടെക്സ്റ്റ് ഇവിടെ ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ പേസ്റ്റ് ചെയ്യുക:", height=250, 
-                          placeholder="ഇവിടെ നിങ്ങളുടെ മലയാളം വാചകങ്ങൾ എഴുതുക...")
-
-if st.button("Convert to Speech (വോയ്സ് ആക്കുക)"):
-    # സ്ക്രീനിൽ കീ ഇല്ലെങ്കിൽ സിസ്റ്റം എൻവയോൺമെന്റിൽ ഉണ്ടോ എന്ന് നോക്കുന്നു
-    final_key = api_key_input or os.environ.get("GEMINI_API_KEY")
-    
-    if not final_key:
-        st.error("ദയവായി സാധുവായ ഒരു Gemini API Key നൽകുക!")
-    elif not text_input.strip():
-        st.warning("ദയവായി എന്തെങ്കിലും ടെക്സ്റ്റ് ടൈപ്പ് ചെയ്യുക!")
-    else:
-        with st.spinner("വോയ്സ് നിർമ്മിച്ചുകൊണ്ടിരിക്കുന്നു... ദയവായി കാത്തിരിക്കുക..."):
-            try:
-                # എൻവയോൺമെന്റ് വേരിയബിളിലേക്ക് കീ സെറ്റ് ചെയ്യുന്നു
-                os.environ["GEMINI_API_KEY"] = final_key
-                
-                # ഗൂഗിളിന്റെ ഒഫീഷ്യൽ പുതിയ ക്ലയന്റ് കോളിംഗ്
-                client = genai.Client()
-                
-                # സെലക്ട് ചെയ്ത വോയിസ് പേര് മാത്രം വേർതിരിച്ചെടുക്കുന്നു (ഉദാ: Aoede)
-                selected_voice = voice_option.split(" ")[0]
-                
-                # 400 Error പരിഹരിക്കാൻ response_modalities ഉപയോഗിക്കുന്നു
-                response = client.models.generate_content(
-                    model='gemini-3.1-flash-tts-preview', # ശരിയായ ഒഫീഷ്യൽ TTS മോഡൽ
-                    contents=f"Please read the following Malayalam text out loud accurately with no extra commentary: {text_input}",
-                    config=types.GenerateContentConfig(
-                        response_modalities=["AUDIO"], # ഇവിടെ ഓഡിയോ റെസ്പോൺസ് വേണമെന്ന് ആവശ്യപ്പെടുന്നു
-                        speech_config=types.SpeechConfig(
-                            voice_config=types.VoiceConfig(
-                                prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                                    voice_name=selected_voice
-                                )
-                            )
-                        )
-                    )
-                )
-                
-                # ഓഡിയോ കണ്ടെന്റ് റെസ്പോൺസിൽ ഉണ്ടോ എന്ന് പരിശോധിക്കുന്നു
-                audio_parts = [part for part in response.candidates[0].content.parts if part.inline_data]
-                
-                if audio_parts:
-                    # ബൈനറി ഓഡിയോ ഡാറ്റ വേർതിരിച്ചെടുക്കുന്നു
-                    audio_bytes = audio_parts[0].inline_data.data
-                    
-                    st.success("🎉 വോയ്സ് വിജയകരമായി നിർമ്മിച്ചിരിക്കുന്നു!")
-                    
-                    # വെബ്സൈറ്റിൽ ഓഡിയോ പ്ലെയർ കാണിക്കുന്നു (Gemini നൽകുന്നത് WAV/PCM ഫോർമാറ്റാണ്)
-                    st.audio(audio_bytes, format="audio/wav")
-                    
-                    # ഡൗൺലോഡ് ബട്ടൺ
-                    st.download_button(
-                        label="📥 വോയ്സ് ഡൗൺലോഡ് ചെയ്യുക (WAV)",
-                        data=audio_bytes,
-                        file_name="malayalam_speech.wav",
-                        mime="audio/wav"
-                    )
-                else:
-                    st.error("ഓഡിയോ ജനറേറ്റ് ചെയ്യാൻ സാധിച്ചില്ല. നൽകിയ ടെക്സ്റ്റ് വീണ്ടും പരിശോധിക്കുക.")
-                    
-            except Exception as e:
-                st.error(f"Error സംഭവിച്ചിരിക്കുന്നു: {str(e)}")
