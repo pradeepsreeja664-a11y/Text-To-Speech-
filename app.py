@@ -43,7 +43,7 @@ if st.button("Convert to Speech (വോയ്സ് ആക്കുക)"):
                 
                 # 400 Error പരിഹരിക്കാൻ response_modalities ഉപയോഗിക്കുന്നു
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash-preview-tts', # ശരിയായ ഒഫീഷ്യൽ TTS മോഡൽ
+                    model='gemini-3.1-flash-tts-preview', # ശരിയായ ഒഫീഷ്യൽ TTS മോഡൽ
                     contents=f"Please read the following Malayalam text out loud accurately with no extra commentary: {text_input}",
                     config=types.GenerateContentConfig(
                         response_modalities=["AUDIO"], # ഇവിടെ ഓഡിയോ റെസ്പോൺസ് വേണമെന്ന് ആവശ്യപ്പെടുന്നു
