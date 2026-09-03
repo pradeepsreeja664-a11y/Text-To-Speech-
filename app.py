@@ -40,7 +40,7 @@ if st.button("Convert to Speech (വോയ്സ് ആക്കുക)"):
                 # വലിയ ടെക്സ്റ്റുകൾ കൈകാര്യം ചെയ്യാൻ തക്കവണ്ണം പ്രോംപ്റ്റ് തയ്യാറാക്കുന്നു
                 # തന്നിരിക്കുന്ന മലയാളം ടെക്സ്റ്റ് മാറ്റമില്ലാതെ വായിക്കാൻ നിർദ്ദേശം നൽകുന്നു
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash-tts', # പുതിയ TTS മോഡൽ
+                    model='gemini-2.5-pro-preview-tts', # പുതിയ TTS മോഡൽ
                     contents=text_input,
                     config=types.GenerateContentConfig(
                         response_mime_type="audio/mp3", # ഓഡിയോ ഫോർമാറ്റ്
